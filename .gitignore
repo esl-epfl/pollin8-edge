@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# cluster work dirs / data / runs (never committed; staged on scratch)
+data/
+runs/
+work/
+*.out
+
+# compiled paper PDF — not distributed in the public repo
+paper/
+
+# OS / editor
+.DS_Store
+*.swp

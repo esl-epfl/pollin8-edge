@@ -1,0 +1,15 @@
+# Pinned for reproducibility (Python 3.10). Training stack.
+ultralytics==8.2.103
+torch==2.3.1
+torchvision==0.18.1
+numpy==1.26.4
+pandas==2.2.2
+matplotlib==3.8.4
+pyyaml==6.0.1
+requests==2.32.3
+tqdm==4.66.4
+# tests
+pytest==8.2.2
+# NOTE: GAPflow / NNTool / gvsoc come from the GreenWaves GAP SDK (installed via
+# sensei-sdk/Install.md), NOT from PyPI. quantize.py / simulate_gap9.py degrade
+# gracefully to a documented analytical model when the SDK is absent.

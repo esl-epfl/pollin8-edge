@@ -1,0 +1,2 @@
+micro_f1,precision,recall,macro_f1,count_mae_img,count_rmse_img,count_bias_img,n_images,conf,tuned_on,match_dist,imgsz,provenance
+0.8449,0.8365,0.8535,0.7728,0.0651,0.2573,0.0052,22861,0.5,val,0.05,512,measured

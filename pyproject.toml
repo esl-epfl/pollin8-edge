@@ -1,0 +1,13 @@
+[project]
+name = "pollin8-edge"
+version = "0.1.0"
+description = "Energy-efficient tinyML insect monitoring on the SENSEI GAP9 node"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

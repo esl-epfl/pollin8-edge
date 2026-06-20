@@ -1,0 +1,10 @@
+class_id,species,n_gt,n_pred,tp,fp,fn,precision,recall,f1,count_mae,count_rmse,r2,provenance
+0,Coccinella septempunctata,553,1044,506,538,47,0.4847,0.915,0.6337,0.0253,0.1682,-0.1946,measured
+1,Apis mellifera,2851,2707,2344,363,507,0.8659,0.8222,0.8435,0.0359,0.1908,0.6787,measured
+2,Bombus lapidarius,382,366,297,69,85,0.8115,0.7775,0.7941,0.0067,0.0821,0.5922,measured
+3,Bombus terrestris,385,382,317,65,68,0.8298,0.8234,0.8266,0.0054,0.0739,0.6749,measured
+4,Eupeodes corolla,752,871,517,354,235,0.5936,0.6875,0.6371,0.0252,0.1594,0.2011,measured
+5,Episyrphus balteatus,544,311,240,71,304,0.7717,0.4412,0.5614,0.0162,0.1277,0.3029,measured
+6,Aglais urticae,48,50,31,19,17,0.62,0.6458,0.6327,0.0006,0.0265,0.666,measured
+7,Vespula vulgaris,274,171,143,28,131,0.8363,0.5219,0.6427,0.0068,0.0823,0.4274,measured
+8,Eristalis tenax,42,0,0,0,42,0.0,0.0,0.0,0.0018,0.0429,-0.0018,measured

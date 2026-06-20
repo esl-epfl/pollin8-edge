@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YOLOv5 Loss, Tiny Insects & Multiclass Confusion Matrix — Interactive Guide</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#121a32; --panel2:#17213d; --ink:#eef3ff; --muted:#b9c4df;
+      --accent:#8bd3ff; --accent2:#b9f18d; --warn:#ffd166; --bad:#ff6b6b; --good:#64d49d;
+      --line:rgba(255,255,255,.12); --shadow:0 16px 40px rgba(0,0,0,.3); --radius:18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:radial-gradient(circle at top left,#17234a 0,#0b1020 38%,#080b16 100%);color:var(--ink);font-family:var(--sans);line-height:1.55}
+    a{color:var(--accent)}
+    .wrap{max-width:1180px;margin:0 auto;padding:32px 18px 60px}
+    .hero{padding:38px 28px;border:1px solid var(--line);background:linear-gradient(135deg,rgba(139,211,255,.14),rgba(185,241,141,.08)),rgba(18,26,50,.82);border-radius:28px;box-shadow:var(--shadow)}
+    .eyebrow{display:inline-flex;gap:8px;align-items:center;font-weight:700;color:#d8f4ff;background:rgba(139,211,255,.12);border:1px solid rgba(139,211,255,.24);padding:6px 10px;border-radius:999px;font-size:13px}
+    h1{font-size:clamp(34px,5vw,60px);line-height:1.02;margin:16px 0 16px;letter-spacing:-.04em}
+    h2{font-size:clamp(26px,3vw,38px);line-height:1.1;margin:0 0 16px;letter-spacing:-.025em}
+    h3{font-size:21px;margin:0 0 10px}
+    h4{font-size:16px;margin:0 0 6px;color:#e6ecff}
+    p{margin:0 0 12px;color:var(--muted)}
+    .lead{font-size:19px;max-width:920px;color:#d9e3fb}
+    .nav{position:sticky;top:0;z-index:10;background:rgba(8,11,22,.84);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+    .nav-inner{max-width:1180px;margin:0 auto;display:flex;gap:10px;overflow:auto;padding:10px 18px}
+    .nav a{text-decoration:none;color:#dbe7ff;border:1px solid var(--line);background:rgba(255,255,255,.04);padding:8px 11px;border-radius:999px;white-space:nowrap;font-size:14px}
+    .nav a:hover{background:rgba(139,211,255,.12)}
+    section{margin-top:26px;padding:26px;border:1px solid var(--line);background:rgba(18,26,50,.78);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .grid{display:grid;gap:16px}
+    .g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}.hero{padding:26px 18px}section{padding:20px}}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));border:1px solid var(--line);border-radius:16px;padding:17px;min-height:100%;position:relative;overflow:hidden}
+    .card strong{color:var(--ink)}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800;color:#08111f;background:var(--accent2);margin-bottom:10px}
+    .pill.blue{background:var(--accent)}.pill.yellow{background:var(--warn)}.pill.red{background:var(--bad);color:#fff}
+    .tiny-note{font-size:13px;color:#aebce0}.mono{font-family:var(--mono)}
+    .flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:12px;align-items:center;margin-top:20px}
+    .flowbox{padding:18px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);text-align:center}
+    .arrow{font-size:28px;color:var(--accent)}
+    @media(max-width:780px){.flow{grid-template-columns:1fr}.arrow{transform:rotate(90deg);text-align:center}}
+    .branch{display:flex;gap:12px;align-items:flex-start;padding:13px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.035)}
+    .icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:rgba(139,211,255,.15);border:1px solid rgba(139,211,255,.25);font-size:22px;flex:0 0 auto}
+    .control{margin:12px 0}.control label{display:flex;justify-content:space-between;gap:12px;font-size:14px;color:#dce7ff;margin-bottom:6px}.control output{font-family:var(--mono);color:var(--accent)}
+    input[type="range"]{width:100%;accent-color:#8bd3ff} select, button, input[type="number"]{font:inherit;border-radius:10px;border:1px solid var(--line);background:#0e1730;color:var(--ink);padding:8px 10px}
+    button{cursor:pointer;background:linear-gradient(180deg,rgba(139,211,255,.22),rgba(139,211,255,.08));border-color:rgba(139,211,255,.25);font-weight:800} button:hover{filter:brightness(1.12)}
+    .barframe{height:15px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;border:1px solid var(--line);margin:8px 0 14px}.bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .25s}.bar.warn{background:linear-gradient(90deg,var(--warn),var(--bad))}.bar.good{background:linear-gradient(90deg,var(--good),var(--accent2))}
+    .meterrow{display:grid;grid-template-columns:130px 1fr 70px;gap:10px;align-items:center;font-size:14px;color:#dce6ff}
+    .toy{height:230px;display:grid;place-items:center;background:radial-gradient(circle at center,rgba(139,211,255,.08),rgba(255,255,255,.02));border:1px dashed rgba(255,255,255,.18);border-radius:16px;position:relative;overflow:hidden}
+    .tilegrid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:18px 18px}.boxtrue,.boxpred{position:absolute;border:3px solid var(--good);border-radius:7px;background:rgba(100,212,157,.15)}.boxpred{border-color:var(--bad);background:rgba(255,107,107,.14)}
+    .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}.legend span{display:inline-flex;align-items:center;gap:6px;color:#cbd7f2;font-size:13px}.sw{width:14px;height:14px;border-radius:4px;background:var(--good)}.sw.red{background:var(--bad)}.sw.blue{background:var(--accent)}.sw.yellow{background:var(--warn)}
+    .formula{font-family:var(--mono);font-size:14px;color:#eaf2ff;background:#0a1228;border:1px solid var(--line);border-radius:13px;padding:12px;overflow:auto}
+    .timeline{display:grid;gap:12px}.step{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:start}.num{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(139,211,255,.16);border:1px solid rgba(139,211,255,.28);font-weight:900;color:#dff5ff}
+    .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{border-collapse:collapse;width:100%;min-width:760px;background:rgba(255,255,255,.025)}th,td{border-bottom:1px solid var(--line);padding:12px;text-align:left;vertical-align:top;color:#dbe7ff}th{background:rgba(139,211,255,.1);font-size:13px;text-transform:uppercase;letter-spacing:.04em}tr:last-child td{border-bottom:0}.tag{font-size:12px;border:1px solid var(--line);padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.05);white-space:nowrap}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.tab{padding:9px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);cursor:pointer;font-weight:800;color:#dbe7ff}.tab.active{background:rgba(139,211,255,.22);border-color:rgba(139,211,255,.45)}.tabpane{display:none}.tabpane.active{display:block}
+    .matrixTools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0 14px}.matrix{display:grid;gap:5px;overflow:auto;max-width:100%;padding-bottom:6px}.cell,.headcell,.sidecell{min-width:86px;min-height:52px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;text-align:center;padding:5px}.headcell,.sidecell{background:rgba(139,211,255,.1);font-size:12px;font-weight:900;color:#eaf6ff}.sidecell{justify-items:start;text-align:left;padding-left:8px}.cell{background:rgba(255,255,255,.04);position:relative}.cell input{width:70px;text-align:center;background:rgba(0,0,0,.25);padding:6px;border-radius:8px}.cell.diag{outline:2px solid rgba(100,212,157,.6)}
+    .metricCards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}@media(max-width:900px){.metricCards{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.metricCards{grid-template-columns:1fr}}
+    .metric{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:14px;padding:14px}.metric b{font-size:25px;display:block;color:#fff}.metric span{font-size:13px;color:#aebce0}.goodtxt{color:var(--good)!important}.badtxt{color:var(--bad)!important}.warntxt{color:var(--warn)!important}
+    .confusionExplain{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:850px){.confusionExplain{grid-template-columns:1fr}}
+    .miniCM{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-width:360px}.miniCM div{border:1px solid var(--line);border-radius:9px;padding:10px;text-align:center;background:rgba(255,255,255,.05);font-size:13px}.miniCM .hi{background:rgba(100,212,157,.22)}.miniCM .fp{background:rgba(255,209,102,.18)}.miniCM .fn{background:rgba(255,107,107,.17)}
+    .callout{border-left:4px solid var(--accent);background:rgba(139,211,255,.09);padding:14px 16px;border-radius:12px;margin:14px 0;color:#dceaff}.callout.warn{border-left-color:var(--warn);background:rgba(255,209,102,.08)}.callout.good{border-left-color:var(--good);background:rgba(100,212,157,.08)}
+    .footer{color:#9aa8c9;text-align:center;margin-top:28px;font-size:13px}.spark{position:absolute;right:-24px;top:-24px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(139,211,255,.18),transparent 65%)}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#big-picture">Big picture</a>
+      <a href="#loss">Loss function</a>
+      <a href="#focal">Focal loss</a>
+      <a href="#balance">Class balance</a>
+      <a href="#nwd">NWD vs IoU</a>
+      <a href="#selection">Model selection</a>
+      <a href="#ablation">Ablation</a>
+      <a href="#confusion">Confusion matrix</a>
+    </div>
+  </nav>
+  <main class="wrap">
+    <header class="hero">
+      <span class="eyebrow">🦋 Interactive guide · YOLOv5 training for tiny insect counting</span>
+      <h1>Train the model to count tiny insects, not draw perfect boxes.</h1>
+      <p class="lead">This page explains the original technical paragraph visually. You can move sliders, compare losses, and play with a multiclass confusion matrix to see why focal loss, class-balanced weighting, NWD, and F₁-based checkpoint selection make sense for this task.</p>
+      <div class="flow">
+        <div class="flowbox"><strong>Image tile</strong><br><span class="tiny-note">mostly background, maybe tiny insects</span></div>
+        <div class="arrow">→</div>
+        <div class="flowbox"><strong>YOLOv5 predicts</strong><br><span class="tiny-note">boxes + objectness + species</span></div>
+        <div class="arrow">→</div>
+        <div class="flowbox"><strong>Your deliverable</strong><br><span class="tiny-note">accurate counts per species</span></div>
+      </div>
+    </header>
+
+    <section id="big-picture">
+      <h2>1. The big idea</h2>
+      <div class="grid g3">
+        <div class="card"><div class="spark"></div><span class="pill blue">Problem</span><h3>Tiny objects</h3><p>A one-pixel box shift can look like a huge error when the insect is only a few pixels wide.</p></div>
+        <div class="card"><span class="pill yellow">Problem</span><h3>Mostly background</h3><p>The model sees far more empty background than insects, so easy negatives can dominate learning.</p></div>
+        <div class="card"><span class="pill red">Problem</span><h3>Counting goal</h3><p>The final goal is “found and classified,” not perfect rectangle edges.</p></div>
+      </div>
+      <div class="callout good"><strong>Translation:</strong> YOLOv5’s default training objective is not wrong, but it is not perfectly aligned with your scientific output. The fixes below make training care more about missed insects, rare species, and counting accuracy.</div>
+    </section>
+
+    <section id="loss">
+      <h2>2. What is YOLOv5’s loss function?</h2>
+      <p>A loss function is the model’s “wrongness score.” During training, YOLOv5 tries to make this score smaller.</p>
+      <div class="grid g3">
+        <div class="branch"><div class="icon">▢</div><div><h3>Box loss</h3><p>How close is the predicted box to the real box?</p><span class="tag">CIoU by default</span></div></div>
+        <div class="branch"><div class="icon">🎯</div><div><h3>Objectness loss</h3><p>Did the model correctly decide whether an object exists here?</p><span class="tag">BCE by default</span></div></div>
+        <div class="branch"><div class="icon">🏷️</div><div><h3>Class loss</h3><p>If there is an insect, did the model choose the right species?</p><span class="tag">BCE by default</span></div></div>
+      </div>
+      <div class="grid g2" style="margin-top:16px">
+        <div class="card">
+          <h3>Default YOLOv5 weighting</h3>
+          <p>Default-ish weights from your paragraph: box : obj : cls = <span class="mono">0.05 : 1.0 : 0.5</span></p>
+          <div class="meterrow"><span>Box</span><div class="barframe"><div id="barDefaultBox" class="bar"></div></div><span>0.05</span></div>
+          <div class="meterrow"><span>Objectness</span><div class="barframe"><div id="barDefaultObj" class="bar good"></div></div><span>1.00</span></div>
+          <div class="meterrow"><span>Class</span><div class="barframe"><div id="barDefaultCls" class="bar"></div></div><span>0.50</span></div>
+        </div>
+        <div class="card">
+          <h3>Try your own weighting</h3>
+          <p>For insect counting, you usually want to care less about tight boxes and more about finding/classifying insects.</p>
+          <div class="control"><label>Box weight <output id="boxWOut"></output></label><input id="boxW" type="range" min="0" max="1" step="0.01" value="0.03"></div>
+          <div class="control"><label>Objectness weight <output id="objWOut"></output></label><input id="objW" type="range" min="0" max="2" step="0.05" value="1.2"></div>
+          <div class="control"><label>Class weight <output id="clsWOut"></output></label><input id="clsW" type="range" min="0" max="2" step="0.05" value="0.8"></div>
+          <div class="meterrow"><span>Box</span><div class="barframe"><div id="barBox" class="bar warn"></div></div><span id="boxWVal"></span></div>
+          <div class="meterrow"><span>Objectness</span><div class="barframe"><div id="barObj" class="bar good"></div></div><span id="objWVal"></span></div>
+          <div class="meterrow"><span>Class</span><div class="barframe"><div id="barCls" class="bar"></div></div><span id="clsWVal"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="focal">
+      <h2>3. Focal loss: stop wasting effort on easy background</h2>
+      <p>Focal loss down-weights easy examples. In your task, many tiles are easy background, while the important cases are tiny insects and mimic species.</p>
+      <div class="grid g2">
+        <div class="card">
+          <h3>Move γ to see the effect</h3>
+          <div class="control"><label>Focal gamma γ <output id="gammaOut"></output></label><input id="gamma" type="range" min="0" max="4" step="0.1" value="1.8"></div>
+          <div class="control"><label>Easy background confidence p <output id="easyPOut"></output></label><input id="easyP" type="range" min="0.5" max="0.999" step="0.001" value="0.98"></div>
+          <div class="control"><label>Hard insect/mimic confidence p <output id="hardPOut"></output></label><input id="hardP" type="range" min="0.05" max="0.95" step="0.01" value="0.55"></div>
+          <div class="meterrow"><span>Easy example</span><div class="barframe"><div id="easyBar" class="bar warn"></div></div><span id="easyWeight"></span></div>
+          <div class="meterrow"><span>Hard example</span><div class="barframe"><div id="hardBar" class="bar good"></div></div><span id="hardWeight"></span></div>
+        </div>
+        <div class="card">
+          <h3>Plain-English meaning</h3>
+          <p>With ordinary BCE, millions of easy “not insect” regions still contribute learning signal. Focal loss says: <strong>if the model already gets this example right, reduce its importance.</strong></p>
+          <div class="formula">focal multiplier ≈ (1 − p)<sup>γ</sup></div>
+          <p class="tiny-note" style="margin-top:12px">This toy display uses the common focal intuition: higher γ makes easy examples almost disappear from the loss. Hard cases keep more influence.</p>
+          <div class="callout"><strong>Why it matters:</strong> better recall on rare/tiny insects means fewer under-counts.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="balance">
+      <h2>4. Class-balanced weighting: rare species should matter more</h2>
+      <p>If one species has 1,000 examples and another has 42, the model naturally learns the common one better. Class-balanced loss gives rare classes more voice without exploding their weights.</p>
+      <div class="grid g2">
+        <div class="card">
+          <h3>Edit the class counts</h3>
+          <div class="grid g2">
+            <label>Eristalis<br><input type="number" id="c0" min="1" value="42"></label>
+            <label>Aglais<br><input type="number" id="c1" min="1" value="65"></label>
+            <label>Bombus<br><input type="number" id="c2" min="1" value="480"></label>
+            <label>Pieris<br><input type="number" id="c3" min="1" value="900"></label>
+          </div>
+          <div class="control"><label>β for effective-number weighting <output id="betaOut"></output></label><input id="beta" type="range" min="0.9" max="0.9999" step="0.0001" value="0.999"></div>
+          <p class="formula">effective number = (1 − βⁿ) / (1 − β)</p>
+        </div>
+        <div class="card">
+          <h3>Normalized class weights</h3>
+          <div id="classBars"></div>
+          <p class="tiny-note">Weights are normalized so their average is 1. Rare classes get boosted, but not as violently as raw inverse frequency.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="nwd">
+      <h2>5. NWD vs IoU: why tiny boxes are fragile</h2>
+      <p>IoU measures box overlap. For tiny insects, a one-pixel shift can collapse overlap. NWD is designed to be more scale-robust by comparing boxes more like soft Gaussian blobs.</p>
+      <div class="grid g2">
+        <div class="card">
+          <h3>Box-shift toy simulator</h3>
+          <div class="control"><label>Object box size in pixels <output id="sizeOut"></output></label><input id="objSize" type="range" min="3" max="80" step="1" value="8"></div>
+          <div class="control"><label>Prediction shift in pixels <output id="shiftOut"></output></label><input id="shift" type="range" min="0" max="20" step="1" value="1"></div>
+          <div class="control"><label>NWD blend α <output id="alphaOut"></output></label><input id="alpha" type="range" min="0" max="1" step="0.05" value="0.5"></div>
+          <div class="toy" id="toy"><div class="tilegrid"></div><div id="trueBox" class="boxtrue"></div><div id="predBox" class="boxpred"></div></div>
+          <div class="legend"><span><i class="sw"></i>true box</span><span><i class="sw red"></i>predicted box</span></div>
+        </div>
+        <div class="card">
+          <h3>Scores</h3>
+          <div class="metricCards" style="grid-template-columns:1fr 1fr">
+            <div class="metric"><span>IoU overlap</span><b id="iouScore"></b></div>
+            <div class="metric"><span>NWD-like similarity</span><b id="nwdScore"></b></div>
+            <div class="metric"><span>Blended score</span><b id="blendScore"></b></div>
+            <div class="metric"><span>Interpretation</span><b id="nwdInterpret" style="font-size:18px"></b></div>
+          </div>
+          <div class="callout warn"><strong>Careful:</strong> this is a visual toy, not the exact implementation. It shows the intuition: IoU can punish tiny box shifts harshly, while NWD-style comparison is smoother for tiny objects.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="selection">
+      <h2>6. Training metric: choose the best model for the real job</h2>
+      <p>YOLOv5 often chooses checkpoints using a fitness score that heavily rewards mAP@0.5:0.95. That metric rewards tight boxes. Your actual task needs accurate centre-matched detections and counts.</p>
+      <div class="grid g2">
+        <div class="card">
+          <h3>Compare selection objectives</h3>
+          <div class="control"><label>mAP@0.5 <output id="map50Out"></output></label><input id="map50" type="range" min="0" max="1" step="0.01" value="0.72"></div>
+          <div class="control"><label>mAP@0.5:0.95 <output id="map5095Out"></output></label><input id="map5095" type="range" min="0" max="1" step="0.01" value="0.38"></div>
+          <div class="control"><label>Centre-matched F₁ <output id="f1Out"></output></label><input id="f1score" type="range" min="0" max="1" step="0.01" value="0.81"></div>
+          <div class="metricCards" style="grid-template-columns:1fr 1fr">
+            <div class="metric"><span>Old YOLO-style fitness</span><b id="oldFit"></b><span>0.1·mAP50 + 0.9·mAP50:95</span></div>
+            <div class="metric"><span>Loose-localization fitness</span><b id="looseFit"></b><span>0.9·mAP50 + 0.1·mAP50:95</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Recommended checkpoint logic</h3>
+          <div class="timeline">
+            <div class="step"><div class="num">1</div><div><h4>Primary selector</h4><p>Use validation centre-matched F₁ because it matches “found the insect centre and classified it correctly.”</p></div></div>
+            <div class="step"><div class="num">2</div><div><h4>Guardrail</h4><p>Reject checkpoints with large count bias, even if their F₁ looks okay.</p></div></div>
+            <div class="step"><div class="num">3</div><div><h4>Report benchmark metrics</h4><p>Still report mAP@0.5 for comparability, but do not let strict box precision choose the deployed model.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ablation">
+      <h2>7. Ablation arms: evidence, not assumptions</h2>
+      <p>An ablation study changes the training recipe in controlled steps so you can prove what helped.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Arm</th><th>Box loss</th><th>Objectness / class loss</th><th>Selection</th><th>Question answered</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A: baseline</strong></td><td>CIoU</td><td>BCE</td><td>mAP50 fitness</td><td>How well does standard YOLOv5 work?</td></tr>
+            <tr><td><strong>B: main fix</strong></td><td>CIoU</td><td>Focal + class-balanced</td><td>Centre-matched F₁</td><td>Do the compatible loss/metric changes improve recall and counts?</td></tr>
+            <tr><td><strong>C: tiny-object box fix</strong></td><td>CIoU + NWD</td><td>Focal + class-balanced</td><td>Centre-matched F₁</td><td>Does NWD add extra benefit for few-pixel insects?</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout good"><strong>Nice experimental property:</strong> all three arms have the same inference graph, so deployment energy should be the same. The training changes affect which weights are learned, not the runtime model architecture.</div>
+    </section>
+
+    <section id="confusion">
+      <h2>8. Multiclass confusion matrix playground</h2>
+      <p>A multiclass confusion matrix shows where the model confuses species. Rows are the true species; columns are the predicted species.</p>
+      <div class="tabs">
+        <button class="tab active" data-tab="cm-play">Playground</button>
+        <button class="tab" data-tab="cm-read">How to read it</button>
+        <button class="tab" data-tab="cm-metrics">Metrics explained</button>
+        <button class="tab" data-tab="cm-detection">Detection-specific version</button>
+      </div>
+      <div id="cm-play" class="tabpane active">
+        <div class="matrixTools">
+          <label>Preset <select id="preset">
+            <option value="rare">Rare species under-count</option>
+            <option value="good">Mostly good model</option>
+            <option value="mimic">Mimic confusion</option>
+            <option value="balanced">Balanced toy example</option>
+          </select></label>
+          <label>View <select id="normMode">
+            <option value="raw">Raw counts</option>
+            <option value="row">Row-normalized: recall view</option>
+            <option value="col">Column-normalized: precision view</option>
+            <option value="all">All-normalized: share of total</option>
+          </select></label>
+          <label>Focus class <select id="focusClass"></select></label>
+          <button id="resetPreset">Reset preset</button>
+        </div>
+        <div id="matrix" class="matrix"></div>
+        <div class="metricCards">
+          <div class="metric"><span>Precision for focus class</span><b id="prec"></b><span>When predicted as this species, how often correct?</span></div>
+          <div class="metric"><span>Recall for focus class</span><b id="rec"></b><span>Of real individuals, how many found as this species?</span></div>
+          <div class="metric"><span>F₁ for focus class</span><b id="f1cm"></b><span>Balance of precision and recall</span></div>
+          <div class="metric"><span>Count bias for focus class</span><b id="bias"></b><span>Predicted count − true count</span></div>
+        </div>
+        <div class="grid g3" style="margin-top:14px">
+          <div class="metric"><span>Overall accuracy / micro-F₁</span><b id="acc"></b></div>
+          <div class="metric"><span>Macro-F₁</span><b id="macro"></b><span>Average across species equally</span></div>
+          <div class="metric"><span>Weighted-F₁</span><b id="weighted"></b><span>Average weighted by true class support</span></div>
+        </div>
+      </div>
+      <div id="cm-read" class="tabpane">
+        <div class="confusionExplain">
+          <div class="card">
+            <h3>Rows = reality</h3>
+            <p>Each row starts from the ground-truth label. Read across a row to answer: <strong>“What did real Eristalis get predicted as?”</strong></p>
+            <div class="miniCM" style="margin-top:12px">
+              <div></div><div>Pred A</div><div>Pred B</div><div>True A</div><div class="hi">correct A</div><div class="fn">A mistaken as B</div><div>True B</div><div class="fp">B mistaken as A</div><div class="hi">correct B</div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Columns = predictions</h3>
+            <p>Each column collects what the model called a species. Read down a column to answer: <strong>“When the model predicted Aglais, what was it really?”</strong></p>
+            <div class="legend"><span><i class="sw"></i>Diagonal = correct</span><span><i class="sw yellow"></i>Column errors = false positives</span><span><i class="sw red"></i>Row errors = false negatives</span></div>
+          </div>
+        </div>
+        <div class="callout"><strong>For your insect task:</strong> a row with many off-diagonal cells means that true species is being missed or confused. A column with many off-diagonal cells means the model over-predicts that species.</div>
+      </div>
+      <div id="cm-metrics" class="tabpane">
+        <div class="grid g2">
+          <div class="card"><h3>Per-class metrics</h3><p><strong>TP</strong> is the diagonal cell for the class. <strong>FN</strong> is the rest of that class’s row. <strong>FP</strong> is the rest of that class’s column.</p><p class="formula">precision = TP / (TP + FP)<br>recall = TP / (TP + FN)<br>F₁ = 2·precision·recall / (precision + recall)</p></div>
+          <div class="card"><h3>Macro vs weighted vs micro</h3><p><strong>Macro-F₁</strong> treats every species equally, so rare species matter a lot.</p><p><strong>Weighted-F₁</strong> gives common species more influence.</p><p><strong>Micro-F₁</strong> pools all decisions. In ordinary single-label multiclass classification, it equals accuracy.</p></div>
+        </div>
+        <div class="callout warn"><strong>Important for rare species:</strong> accuracy can look good while rare-species recall is terrible. That is why macro-F₁ and per-species count bias are important in your reporting.</div>
+      </div>
+      <div id="cm-detection" class="tabpane">
+        <div class="grid g2">
+          <div class="card"><h3>Classification matrix</h3><p>Assumes every object has one true class and one predicted class. Good for analyzing species confusion after matching detections to labels.</p></div>
+          <div class="card"><h3>Detection matrix</h3><p>Object detection often needs an extra <strong>missed</strong> column and <strong>false detection</strong> row.</p><p>Example: a true insect with no matched prediction contributes to “missed.” A prediction that matches no real insect contributes to “false detection.”</p></div>
+        </div>
+        <div class="tablewrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>Situation</th><th>Confusion-matrix meaning</th><th>Counting consequence</th></tr></thead>
+            <tbody>
+              <tr><td>True Eristalis predicted as Aglais</td><td>Off-diagonal species confusion</td><td>One Eristalis under-count and one Aglais over-count</td></tr>
+              <tr><td>True Eristalis not detected</td><td>False negative / missed object</td><td>Eristalis under-count</td></tr>
+              <tr><td>Background predicted as insect</td><td>False positive / extra object</td><td>Over-count for predicted species</td></tr>
+              <tr><td>Box centre matches but box edges imperfect</td><td>Correct for centre-matched F₁, possibly bad for strict mAP</td><td>Usually okay for counting</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Final mental model</h2>
+      <div class="grid g4">
+        <div class="card"><span class="pill blue">Focal</span><p>Focus learning on hard insects and mimics instead of easy empty background.</p></div>
+        <div class="card"><span class="pill yellow">Class-balanced</span><p>Make rare species important enough during training.</p></div>
+        <div class="card"><span class="pill blue">NWD</span><p>Make tiny-box localization less brittle than pure IoU.</p></div>
+        <div class="card"><span class="pill green">F₁ selection</span><p>Choose the checkpoint that best matches counting, not strict box aesthetics.</p></div>
+      </div>
+    </section>
+    <p class="footer">Standalone interactive teaching page. No external libraries required.</p>
+  </main>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = (x, d=2) => Number.isFinite(x) ? x.toFixed(d) : "0.00";
+const pct = x => Number.isFinite(x) ? (100*x).toFixed(1)+"%" : "0.0%";
+
+function updateWeights(){
+  $('barDefaultBox').style.width='5%'; $('barDefaultObj').style.width='100%'; $('barDefaultCls').style.width='50%';
+  const box=+$('boxW').value, obj=+$('objW').value, cls=+$('clsW').value, max=2;
+  for(const [id,val] of [['boxWOut',box],['objWOut',obj],['clsWOut',cls],['boxWVal',box],['objWVal',obj],['clsWVal',cls]]) $(id).textContent=fmt(val,2);
+  $('barBox').style.width=(box/max*100)+'%'; $('barObj').style.width=(obj/max*100)+'%'; $('barCls').style.width=(cls/max*100)+'%';
+}
+['boxW','objW','clsW'].forEach(id=>$(id).addEventListener('input',updateWeights));
+
+function updateFocal(){
+  const g=+$('gamma').value, e=+$('easyP').value, h=+$('hardP').value;
+  $('gammaOut').textContent=fmt(g,1); $('easyPOut').textContent=fmt(e,3); $('hardPOut').textContent=fmt(h,2);
+  const ew=Math.pow(1-e,g), hw=Math.pow(1-h,g);
+  $('easyWeight').textContent=fmt(ew,4); $('hardWeight').textContent=fmt(hw,4);
+  const max=Math.max(ew,hw,0.0001);
+  $('easyBar').style.width=(ew/max*100)+'%'; $('hardBar').style.width=(hw/max*100)+'%';
+}
+['gamma','easyP','hardP'].forEach(id=>$(id).addEventListener('input',updateFocal));
+
+const classNames=['Eristalis','Aglais','Bombus','Pieris'];
+function updateBalance(){
+  const beta=+$('beta').value; $('betaOut').textContent=beta.toFixed(4);
+  const counts=[0,1,2,3].map(i=>Math.max(1,+$('c'+i).value || 1));
+  let raw=counts.map(n=>(1-beta)/(1-Math.pow(beta,n)));
+  const mean=raw.reduce((a,b)=>a+b,0)/raw.length;
+  const weights=raw.map(w=>w/mean);
+  const max=Math.max(...weights);
+  $('classBars').innerHTML=weights.map((w,i)=>`<div class="meterrow"><span>${classNames[i]}<br><span class="tiny-note">n=${counts[i]}</span></span><div class="barframe"><div class="bar ${i<2?'warn':'good'}" style="width:${(w/max*100).toFixed(1)}%"></div></div><span>${w.toFixed(2)}×</span></div>`).join('');
+}
+['beta','c0','c1','c2','c3'].forEach(id=>$(id).addEventListener('input',updateBalance));
+
+function updateNWD(){
+  const size=+$('objSize').value, shift=+$('shift').value, alpha=+$('alpha').value;
+  $('sizeOut').textContent=size+' px'; $('shiftOut').textContent=shift+' px'; $('alphaOut').textContent=fmt(alpha,2);
+  const inter=Math.max(0,size-shift)*Math.max(0,size-shift);
+  const union=2*size*size-inter;
+  const iou=union>0?inter/union:0;
+  // A simple smooth similarity proxy: high if centers are close relative to box size.
+  const dist=Math.sqrt(2)*shift;
+  const sigma=Math.max(2,size/2);
+  const nwd=Math.exp(-(dist*dist)/(2*sigma*sigma));
+  const blend=(1-alpha)*iou+alpha*nwd;
+  $('iouScore').textContent=pct(iou); $('nwdScore').textContent=pct(nwd); $('blendScore').textContent=pct(blend);
+  $('nwdInterpret').textContent = iou < .5 && nwd > .7 ? 'IoU is harsh here' : (size < 12 ? 'tiny-box regime' : 'larger box is stable');
+  const scale=2.0; const px=Math.min(140,Math.max(12,size*scale)); const center=115;
+  const trueBox=$('trueBox'), predBox=$('predBox');
+  trueBox.style.width=px+'px'; trueBox.style.height=px+'px'; predBox.style.width=px+'px'; predBox.style.height=px+'px';
+  trueBox.style.left=(center-px/2)+'px'; trueBox.style.top=(center-px/2)+'px';
+  predBox.style.left=(center-px/2+shift*scale)+'px'; predBox.style.top=(center-px/2+shift*scale)+'px';
+}
+['objSize','shift','alpha'].forEach(id=>$(id).addEventListener('input',updateNWD));
+
+function updateSelection(){
+  const m50=+$('map50').value, m95=+$('map5095').value, f1=+$('f1score').value;
+  $('map50Out').textContent=pct(m50); $('map5095Out').textContent=pct(m95); $('f1Out').textContent=pct(f1);
+  $('oldFit').textContent=pct(0.1*m50+0.9*m95);
+  $('looseFit').textContent=pct(0.9*m50+0.1*m95);
+}
+['map50','map5095','f1score'].forEach(id=>$(id).addEventListener('input',updateSelection));
+
+const presets={
+  rare:[[18,7,10,7],[4,39,13,9],[3,10,420,47],[2,7,51,840]],
+  good:[[36,3,2,1],[2,58,3,2],[6,8,445,21],[5,4,26,865]],
+  mimic:[[25,9,7,1],[11,36,15,3],[8,31,392,49],[1,4,44,851]],
+  balanced:[[40,6,3,1],[5,42,2,1],[3,4,43,0],[2,1,3,44]]
+};
+let M=JSON.parse(JSON.stringify(presets.rare));
+
+function initFocus(){
+  $('focusClass').innerHTML=classNames.map((c,i)=>`<option value="${i}">${c}</option>`).join('');
+}
+function resetPreset(){
+  M=JSON.parse(JSON.stringify(presets[$('preset').value])); renderMatrix(); computeCM();
+}
+$('preset').addEventListener('change', resetPreset); $('resetPreset').addEventListener('click', resetPreset);
+$('normMode').addEventListener('change', renderMatrix); $('focusClass').addEventListener('change', computeCM);
+
+function renderMatrix(){
+  const n=classNames.length, mode=$('normMode').value;
+  const mat=$('matrix'); mat.style.gridTemplateColumns=`130px repeat(${n}, minmax(86px, 1fr))`;
+  let html='<div class="headcell">True ↓ / Pred →</div>'+classNames.map(c=>`<div class="headcell">${c}</div>`).join('');
+  const total=M.flat().reduce((a,b)=>a+b,0);
+  const rowSums=M.map(r=>r.reduce((a,b)=>a+b,0));
+  const colSums=classNames.map((_,j)=>M.reduce((a,r)=>a+r[j],0));
+  const maxRaw=Math.max(...M.flat(),1);
+  for(let i=0;i<n;i++){
+    html+=`<div class="sidecell">True ${classNames[i]}<br><span class="tiny-note">support ${rowSums[i]}</span></div>`;
+    for(let j=0;j<n;j++){
+      let shown=M[i][j], denom=1, suffix='';
+      if(mode==='row'){denom=rowSums[i]||1; shown=M[i][j]/denom*100; suffix='%'}
+      if(mode==='col'){denom=colSums[j]||1; shown=M[i][j]/denom*100; suffix='%'}
+      if(mode==='all'){denom=total||1; shown=M[i][j]/denom*100; suffix='%'}
+      const raw=M[i][j]; const intensity= mode==='raw' ? raw/maxRaw : shown/100;
+      const color=i===j?`rgba(100,212,157,${0.12+0.55*intensity})`:`rgba(255,107,107,${0.08+0.45*intensity})`;
+      const val = mode==='raw' ? raw : shown.toFixed(1)+suffix;
+      html+=`<div class="cell ${i===j?'diag':''}" style="background:${color}" title="True ${classNames[i]}, predicted ${classNames[j]}"><input type="number" min="0" value="${raw}" data-i="${i}" data-j="${j}"><span class="tiny-note">${mode==='raw'?'':val}</span></div>`;
+    }
+  }
+  mat.innerHTML=html;
+  mat.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',e=>{const i=+e.target.dataset.i,j=+e.target.dataset.j;M[i][j]=Math.max(0,Math.round(+e.target.value||0));computeCM(false);renderMatrix();}));
+}
+function safeDiv(a,b){return b? a/b : 0}
+function perClass(k){
+  const total=M.flat().reduce((a,b)=>a+b,0);
+  const row=M[k].reduce((a,b)=>a+b,0), col=M.reduce((a,r)=>a+r[k],0), tp=M[k][k];
+  const fn=row-tp, fp=col-tp, tn=total-tp-fn-fp;
+  const pr=safeDiv(tp,tp+fp), re=safeDiv(tp,tp+fn), f=safeDiv(2*pr*re,pr+re);
+  return {tp,fn,fp,tn,row,col,pr,re,f,bias:col-row};
+}
+function computeCM(rerender=true){
+  const k=+$('focusClass').value||0, pc=perClass(k);
+  $('prec').textContent=pct(pc.pr); $('rec').textContent=pct(pc.re); $('f1cm').textContent=pct(pc.f);
+  const b=pc.bias, bp=safeDiv(b,pc.row)*100; $('bias').textContent=(b>=0?'+':'')+b+` (${bp>=0?'+':''}${bp.toFixed(1)}%)`;
+  $('bias').className=b<0?'badtxt':b>0?'warntxt':'goodtxt';
+  const total=M.flat().reduce((a,b)=>a+b,0), diag=classNames.reduce((a,_,i)=>a+M[i][i],0);
+  $('acc').textContent=pct(safeDiv(diag,total));
+  const pcs=classNames.map((_,i)=>perClass(i));
+  const macro=pcs.reduce((a,x)=>a+x.f,0)/pcs.length;
+  const weighted=pcs.reduce((a,x)=>a+x.f*x.row,0)/(pcs.reduce((a,x)=>a+x.row,0)||1);
+  $('macro').textContent=pct(macro); $('weighted').textContent=pct(weighted);
+}
+
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active'); $(btn.dataset.tab).classList.add('active');
+}));
+
+updateWeights(); updateFocal(); updateBalance(); updateNWD(); updateSelection(); initFocus(); renderMatrix(); computeCM();
+</script>
+</body>
+</html>

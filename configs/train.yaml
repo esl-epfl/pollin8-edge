@@ -1,0 +1,25 @@
+# Fine-tuning hyper-parameters (Ultralytics-compatible). Rationale in docs/rationale.md.
+epochs: 200         # upper bound only; early stopping (patience+min_delta) picks the real stop
+patience: 10        # stop after 10 epochs without a >min_delta fitness gain (best ckpt kept)
+min_delta: 0.002    # gains below this don't count as improvement — ignores marginal/jittery
+                    #   upticks so a plateaued run exits promptly (fitness=0.1*mAP50+0.9*mAP50-95).
+                    #   Set 0 to fall back to Ultralytics' strict built-in early stopping.
+workers: 2          # dataloader workers — keep = #cores on small MIG slices to avoid OOM
+batch: 64
+imgsz: 160          # 160x120 effective; GAP9 L1/L2 budget. Raise to 320 if objects are too small.
+optimizer: SGD
+lr0: 0.01
+lrf: 0.01           # cosine final lr factor
+momentum: 0.937
+weight_decay: 0.0005
+warmup_epochs: 3.0
+# freeze=0: train END-TO-END. The pico backbone has NO usable pretrained init
+# (yolov5n weights do not fit width=0.1), so freezing it would freeze random noise.
+freeze: 0
+# augmentation (Ultralytics defaults tuned for small objects)
+mosaic: 1.0
+fliplr: 0.5
+hsv_h: 0.015
+hsv_s: 0.7
+hsv_v: 0.4
+seed: 0
