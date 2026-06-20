@@ -46,6 +46,3 @@ After any rerun: `python scripts/make_values.py`, `python scripts/make_tables.py
 `python scripts/make_figures.py` (or `scripts/build_paper.sh` end-to-end). Each reads
 `results/metrics/*.csv` and degrades gracefully when a CSV is absent.
 
-## Code-health rules
-Keep modules thin wrappers; one number → one script → one CSV; tag provenance;
-never overwrite a measured CSV with a simulated one. See `CLAUDE.md`.
