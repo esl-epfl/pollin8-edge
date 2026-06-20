@@ -71,7 +71,7 @@ isolate the loss/imbalance recipe; `base` (standard BCE, no re-balancing) is the
 The trained network is quantised to **8-bit integer** (accelerator requirement) and mapped onto
 GAP9's NE16 convolution accelerator so weights and the largest activation fit the chip's 1.5 MB of
 on-chip memory (only the input frame streams from on-package memory at the largest resolution).
-GVSOC (cycle-accurate) and on-board flows are documented for the camera-ready energy cross-check.
+GVSOC (cycle-accurate) and on-board flows are documented.
 
 ## Measurement
 Per-inference **energy and latency are measured on GAP9 silicon** for the operator-identical
