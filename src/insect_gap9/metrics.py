@@ -10,7 +10,13 @@ from dataclasses import dataclass
 # --- Platform constants (source: paper Sec. III + GAP9 datasheet) -------------
 GAP9_CLUSTER_FREQ_HZ = 370e6        # 8-core cluster max frequency
 ACTIVE_POWER_MW_RANGE = (30.0, 80.0)  # camera capture + cluster inference
-DEEP_SLEEP_POWER_MW = 0.1           # < 100 µW PMU/RTC/MRAM domain
+# GAP9's SoC-only deep-sleep is <0.1 mW (PMU/RTC/MRAM domain), but a fielded camera node also
+# draws standby through the board, image sensor and PMIC. The duty-cycled lifetime is therefore
+# projected on the conservative *system-wide* sleep floor of the SENSEI node, 1 mW
+# (Wiese et al., COINS 2025), matching the paper's deployment projection. The SoC-only figure is
+# kept for reference; using it alone would overstate lifetime by ~10x (unrealistic multi-year).
+SOC_DEEP_SLEEP_POWER_MW = 0.1       # GAP9 SoC alone (reference; not the projection floor)
+DEEP_SLEEP_POWER_MW = 1.0           # conservative system-wide standby (Wiese 2025)
 CAMERA_POWER_MW = 0.07              # HiMax HM01B0 always-on (70 µW)
 
 

@@ -174,57 +174,150 @@ def fig_res_sweep(outdir: Path):
         plt.close(f)
 
 
-def fig_accuracy_energy(outdir: Path):
-    """Accuracy-energy frontier for ALL FOUR configs: x=energy_mj, y=map50_mean (+/-std),
-    one curve per arm (baseline prominent, variants dashed). Doubles as the loss ablation
-    across resolution---the baseline sits above every variant. Skipped if no base rows."""
+def fig_accuracy_energy(outdir: Path, revised: bool = False):
+    """Grouped bars: mAP@0.5 by input resolution, one bar per loss recipe (baseline + three
+    imbalance-handling variants), +/-1 std over three seeds. x-axis annotated with the measured
+    per-inference energy; the deployed baseline bar is ringed. Reads the resolution sweep; the
+    diminishing-returns shape (steep 192->320, flat 320->512) and the closeness of the four
+    recipes are both read directly off the bar heights. Skipped if no base rows.
+    revised=True -> co-author version: square 'NxN px' tick labels (Victor: images are 2-D) and
+    output accuracy_energy_revised.pdf; energy provenance is documented in the LaTeX caption."""
     rows = _read("sensei_arch_sweep.csv")
-    by_arm = {}
+    by_arm, energy = {}, {}
     for r in rows:
         a = (r.get("arm") or "").strip()
         try:
-            by_arm.setdefault(a, []).append((int(r["imgsz"]), float(r["energy_mj"]),
-                        float(r["map50_mean"]), float(r.get("map50_std") or 0.0)))
+            sz = int(r["imgsz"])
+            by_arm.setdefault(a, {})[sz] = (float(r["map50_mean"]), float(r.get("map50_std") or 0.0))
+            energy[sz] = float(r["energy_mj"])
         except (KeyError, ValueError, TypeError):
             continue
     if "base" not in by_arm:
         print("[skip] no base rows in sensei_arch_sweep.csv — run 47_sensei_arch_sweep first")
         return
+    sizes = sorted(energy)                                # 192, 320, 512
     dep = deployed_size()
-    # (colour, marker, linestyle, linewidth, markersize, zorder) per arm; baseline stands out
-    STYLE = {"base":       (WONG["blue"],   "o", "-",  1.7, 4.5, 3),
-             "focal_noiw": (WONG["green"],  "s", "--", 1.0, 3.0, 2),
-             "focal":      (WONG["vermil"], "^", ":",  1.0, 3.0, 2),
-             "nwd":        (WONG["orange"], "D", "-.", 1.0, 3.0, 2)}
+    # (colour, hatch) per arm; hatch on every bar for B&W/print safety (repo convention)
+    STYLE = {"base":       (WONG["blue"],   ""),
+             "focal_noiw": (WONG["green"],  "//"),
+             "focal":      (WONG["vermil"], ".."),
+             "nwd":        (WONG["orange"], "xx")}
     apply_rc()
-    f, ax = plt.subplots(figsize=(COL_W_IN, COL_W_IN * 0.50))
-    for arm in SENSEI_ARMS:
-        pts = sorted(by_arm.get(arm, []), key=lambda t: t[1])
-        if not pts:
-            continue
-        col, mk, ls, lw, ms, z = STYLE.get(arm, (WONG["black"], ".", "-", 1.0, 3.0, 2))
-        xs = [p[1] for p in pts]; ys = [p[2] for p in pts]; es = [p[3] for p in pts]
-        ax.errorbar(xs, ys, yerr=es, marker=mk, linestyle=ls, color=col, capsize=2,
-                    linewidth=lw, markersize=ms, zorder=z, label=ARM_LABEL.get(arm, arm))
-    pts_b = sorted(by_arm["base"])
-    for sz, x, y, _ in pts_b:                             # annotate sizes + ring deployed (baseline)
-        if sz == dep:                                     # deployed: lift above, centred
-            ax.scatter([x], [y], s=80, facecolors="none", edgecolors="black",
-                       linewidths=1.4, zorder=5)
-            ax.annotate(f"{sz}px\n(deployed)", (x, y), textcoords="offset points",
-                        xytext=(0, 13), ha="center", fontsize=6)
-        elif sz == pts_b[-1][0]:                          # largest: into the empty top-right corner
-            ax.annotate(f"{sz}px", (x, y), textcoords="offset points", xytext=(4, 1),
-                        ha="left", fontsize=6)
-        else:                                             # smallest: lift clear of line/error bars
-            ax.annotate(f"{sz}px", (x, y), textcoords="offset points", xytext=(0, 12),
-                        ha="left", fontsize=6)
-    ax.set_xlabel("Energy / inf. (mJ)"); ax.set_ylabel("mAP@0.5")
-    ax.margins(x=0.13, y=0.16)
-    # legend ABOVE the axes (outside the data) so it never overlaps the curves
-    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=4, frameon=False,
-              fontsize=6.5, handlelength=1.6, columnspacing=1.0, borderaxespad=0.1)
-    f.savefig(outdir / "accuracy_energy.pdf", bbox_inches="tight"); plt.close(f)
+    f, ax = plt.subplots(figsize=(COL_W_IN, COL_W_IN * 0.66))
+    arms = [a for a in SENSEI_ARMS if a in by_arm]
+    n = len(arms); w = 0.8 / n; x = list(range(len(sizes)))
+    for k, arm in enumerate(arms):
+        col, hatch = STYLE.get(arm, (WONG["black"], ""))
+        off = (k - (n - 1) / 2) * w
+        ys = [by_arm[arm].get(s, (0.0, 0.0))[0] for s in sizes]
+        es = [by_arm[arm].get(s, (0.0, 0.0))[1] for s in sizes]
+        ax.bar([xi + off for xi in x], ys, w, yerr=es, capsize=2, label=ARM_LABEL.get(arm, arm),
+               color=col, edgecolor="black", linewidth=0.4, hatch=hatch, error_kw=dict(lw=0.7))
+    if dep in sizes:                                       # ring + label the deployed baseline bar
+        di = sizes.index(dep); off0 = (0 - (n - 1) / 2) * w; yb = by_arm["base"][dep][0]
+        ax.scatter([di + off0], [yb], s=55, facecolors="none", edgecolors="black",
+                   linewidths=1.3, zorder=6)
+        ax.annotate("deployed", (di + off0, yb), textcoords="offset points",
+                    xytext=(0, 15), ha="center", fontsize=6.5)
+    ax.set_xticks(x)
+    lab = (lambda s: f"{s}x{s} px\n{energy[s]:.1f} mJ") if revised else (lambda s: f"{s} px\n{energy[s]:.1f} mJ")
+    ax.set_xticklabels([lab(s) for s in sizes])
+    ax.set_ylabel("mAP@0.5")
+    lo = min(by_arm[a][s][0] - by_arm[a][s][1] for a in arms for s in sizes if s in by_arm[a])
+    ax.set_ylim(max(0.0, lo - 0.04), 0.96)
+    ax.grid(axis="y", alpha=0.25, lw=0.4)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=n, frameon=False,
+              fontsize=6.5, handlelength=1.2, columnspacing=0.9, borderaxespad=0.1)
+    name = "accuracy_energy_revised.pdf" if revised else "accuracy_energy.pdf"
+    f.savefig(outdir / name, bbox_inches="tight"); plt.close(f)
+
+
+def fig_convergence_revised(outdir: Path):
+    """Co-author revision of fig_convergence (Philip: resolutions are discrete -> not a line plot;
+    Victor: explain the A. urticae dip). Per-class base-detector recall at 192/320/512 px drawn as
+    a DOT plot (markers only, very faint guide line) so the three discrete operating points read as
+    points, not a continuum. Same Wong palette/markers as the original."""
+    sizes = [192, 320, 512]
+    per = {sz: {r["species"]: r for r in _arm_per_species("base", sz)} for sz in sizes}
+    if not all(per.values()):
+        print("[skip] missing base per-species CSVs for convergence_revised figure")
+        return
+    species = list(per[sizes[-1]].keys())
+    apply_rc()
+    f, ax = plt.subplots(figsize=(COL_W_IN, COL_W_IN * 0.58))
+    marks = ["o", "s", "^", "D", "v", "P", "X", "*", "<"]
+    xpos = list(range(len(sizes)))                            # categorical spacing -> emphasise discreteness
+    for i, sp in enumerate(species):
+        ys = []
+        for sz in sizes:
+            try:
+                ys.append(float(per[sz][sp]["recall"]))
+            except (KeyError, ValueError):
+                ys.append(float("nan"))
+        parts = sp.split()
+        abbr = f"{parts[0][0]}. {' '.join(parts[1:])}" if len(parts) > 1 else sp
+        col = PALETTE[i % len(PALETTE)]
+        ax.plot(xpos, ys, color=col, linewidth=0.5, alpha=0.30, zorder=1)   # faint guide only
+        ax.scatter(xpos, ys, marker=marks[i % 9], color=col, s=22, zorder=3,
+                   edgecolors="black", linewidths=0.3, label=abbr)
+    ax.set_xlabel("Input resolution (px)"); ax.set_ylabel("recall (base detector)")
+    ax.set_xticks(xpos); ax.set_xticklabels([f"{s}x{s}" for s in sizes])
+    ax.set_xlim(-0.35, len(sizes) - 0.65); ax.set_ylim(0.3, 1.0)
+    ax.grid(axis="y", alpha=0.25, lw=0.4)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=3, frameon=False,
+              fontsize=5.4, handlelength=1.0, columnspacing=0.7, labelspacing=0.25, handletextpad=0.3)
+    f.savefig(outdir / "convergence_revised.pdf", bbox_inches="tight"); plt.close(f)
+
+
+def fig_pipeline_revised(outdir: Path):
+    """Co-author revision of fig_pipeline (Philip: 'every stage on-node' is misleading -- training
+    and quantisation are OFFLINE). Same boustrophedon layout, but the offline stages (top row) and
+    on-node stages (bottom row) are enclosed in labelled 'Offline (host)' / 'On-node (GAP9)' bands,
+    and 'Train from scratch' -> 'Train (init YOLOv5n)' to match the recipe."""
+    apply_rc()
+    f, ax = plt.subplots(figsize=(COL_W_IN, COL_W_IN * 0.30))
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
+    ax.margins(0); f.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    bw, bh, y1, y2 = 0.205, 0.34, 0.74, 0.30
+    lin = lambda a, b, n: [a + (b - a) * i / (n - 1) for i in range(n)]
+    xs1, xs2 = lin(0.115, 0.885, 4), lin(0.115, 0.885, 3)
+    blue, green, cream = WONG["blue"], WONG["green"], "#FBE7C6"
+    # background bands: offline (top) vs on-node (bottom)
+    ax.add_patch(mpatches.FancyBboxPatch((0.02, y1 - bh / 2 - 0.05), 0.96, bh + 0.10,
+        boxstyle="round,pad=0.002,rounding_size=0.02", facecolor="#F2F2F2", edgecolor="0.7",
+        linewidth=0.6, linestyle=(0, (3, 2)), zorder=0))
+    ax.add_patch(mpatches.FancyBboxPatch((0.02, y2 - bh / 2 - 0.05), 0.96, bh + 0.10,
+        boxstyle="round,pad=0.002,rounding_size=0.02", facecolor="#E9F1F7", edgecolor=blue,
+        linewidth=0.6, linestyle=(0, (3, 2)), zorder=0))
+    ax.text(0.035, y1 + bh / 2 + 0.005, "Offline (host)", fontsize=4.6, color="0.35", style="italic", va="bottom")
+    ax.text(0.035, y2 + bh / 2 + 0.005, "On-node (GAP9)", fontsize=4.6, color=blue, style="italic", va="bottom")
+
+    def box(cx, cy, text, fc, tc):
+        ax.add_patch(mpatches.FancyBboxPatch((cx - bw / 2, cy - bh / 2), bw, bh,
+            boxstyle="round,pad=0.004,rounding_size=0.06", mutation_aspect=0.28,
+            facecolor=fc, edgecolor="black", linewidth=0.8, zorder=2))
+        ax.text(cx, cy, text, ha="center", va="center", fontsize=5.4, color=tc, linespacing=0.95,
+                zorder=5, fontweight="bold" if fc in (blue, green) else "normal")
+
+    def arrow(x0, y0, x1, y1c):
+        ax.annotate("", xy=(x1, y1c), xytext=(x0, y0),
+                    arrowprops=dict(arrowstyle="-|>", color="0.35", lw=1.1, shrinkA=0, shrinkB=0), zorder=4)
+
+    row1 = [("Benchmark\n9 sp., 21k img", "white", "black"), ("Tiling\n320x320 px", "white", "black"),
+            ("Train\n(init YOLOv5n)", cream, "black"), ("INT8\nquantise", "white", "black")]
+    row2 = [("Deploy on\nGAP9", blue, "white"), ("Per-tile\ninference", "white", "black"),
+            ("Per-species\ncount", green, "white")]
+    for cx, (t, fc, tc) in zip(xs1, row1):
+        box(cx, y1, t, fc, tc)
+    r2x = list(reversed(xs2))
+    for cx, (t, fc, tc) in zip(r2x, row2):
+        box(cx, y2, t, fc, tc)
+    for i in range(3):
+        arrow(xs1[i] + bw / 2, y1, xs1[i + 1] - bw / 2, y1)
+    arrow(xs1[3], y1 - bh / 2, r2x[0], y2 + bh / 2)   # offline -> on-node (the deployment boundary)
+    for i in range(2):
+        arrow(r2x[i] - bw / 2, y2, r2x[i + 1] + bw / 2, y2)
+    f.savefig(outdir / "pipeline_revised.pdf", bbox_inches="tight"); plt.close(f)
 
 
 def fig_ablation(outdir: Path):
@@ -433,12 +526,18 @@ def main(argv=None):
     ap.add_argument("--outdir", type=Path, default=Path("results/figures"))
     a = ap.parse_args(argv)
     a.outdir.mkdir(parents=True, exist_ok=True)
-    # Paper figures only (confusion matrices come from insect_gap9.confusion during eval).
-    fig_pipeline(a.outdir)          # Fig. 1 — end-to-end pipeline
-    fig_accuracy_energy(a.outdir)   # Fig. 2 — accuracy vs measured energy (the loss ablation)
-    fig_convergence(a.outdir)       # Fig. 3 — per-class convergence with resolution
-    fig_count_error(a.outdir)       # Fig. 4 — per-species count error (count-weighted MAE band)
-    fig_ablation(a.outdir)          # annex — build-up ablation panels
+    fig_pipeline(a.outdir)
+    fig_convergence(a.outdir)
+    fig_energy_power(a.outdir)
+    fig_accuracy(a.outdir)
+    fig_res_sweep(a.outdir)
+    fig_accuracy_energy(a.outdir)
+    fig_ablation(a.outdir)
+    fig_count_error(a.outdir)
+    # co-author review revisions
+    fig_convergence_revised(a.outdir)
+    fig_pipeline_revised(a.outdir)
+    fig_accuracy_energy(a.outdir, revised=True)
     print("[done] figures ->", a.outdir)
 
 

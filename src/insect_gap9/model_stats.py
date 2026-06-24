@@ -18,12 +18,16 @@ OUT = Path("results/metrics")
 L2_BUDGET_BYTES = 1_500_000          # GAP9 L2 SRAM
 CODE_BYTES = 200_000                 # approx C runtime + weights-independent code
 
-# Known pico-YOLOv5 (nc=9) top-level layers — exact params from the model summary.
+# Known pico-YOLOv5 (nc=9) top-level layers — params recomputed from yolov5p_sensei.yaml
+# (width/depth=0.10). Backbone+neck (idx 0-23) sum to 306,584; the anchor Detect head is
+# 3 x [Conv2d(ch_i, (nc+5)*3=42, 1)] over P3/P4/P5 (32/56/104 ch) = 8,190 params.
+# Total = 314,774 (~0.31 M). (The earlier 318,667 "Detect" entry was a bogus head that
+# inflated the total to 625,251 — see results/metrics provenance.)
 FALLBACK_TYPES = ["Conv","Conv","C3","Conv","C3","Conv","C3","Conv","C3","SPPF","Conv",
                   "Upsample","Concat","C3","Conv","Upsample","Concat","C3","Conv","Concat",
                   "C3","Conv","Concat","C3","Detect"]
 FALLBACK_PARAMS = [880,1184,1248,4672,4800,16240,14448,52624,49296,27352,5936,0,0,17584,
-                   1856,0,0,5824,9280,0,14896,28336,0,50128,318667]
+                   1856,0,0,5824,9280,0,14896,28336,0,50128,8190]
 
 
 def _macs_total_estimate(imgsz: int) -> int:

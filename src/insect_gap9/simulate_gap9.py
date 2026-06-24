@@ -11,10 +11,30 @@ from pathlib import Path
 from . import metrics as M
 
 OUT = Path("results/metrics")
+DEPLOY_SIZE = 320   # deployed operating point (matches scripts/make_figures.py DEPLOY_SIZE)
 
 
 def _have_gvsoc() -> bool:
     return bool(os.environ.get("SENSEI_SDK_ROOT")) and shutil.which("gvsoc") is not None
+
+
+def measured_perf(imgsz: int = DEPLOY_SIZE) -> dict | None:
+    """Deployed operating point from the silicon sweep (Wiese-measured energy/power/latency).
+
+    Preferred over the analytical model so the deployment projection reproduces the paper's
+    Table II. Returns None if results/metrics/sensei_arch_sweep.csv is absent.
+    """
+    p = OUT / "sensei_arch_sweep.csv"
+    if not p.exists():
+        return None
+    with p.open() as f:
+        for r in csv.DictReader(f):
+            if (r.get("arm") or "").strip() == "base" and int(r["imgsz"]) == imgsz:
+                lat = float(r["latency_ms"])
+                return dict(cycles=int(lat / 1e3 * M.GAP9_CLUSTER_FREQ_HZ),
+                            latency_ms=lat, active_power_mw=float(r["gap9_power_mw"]),
+                            energy_mj=float(r["energy_mj"]))
+    return None
 
 
 def analytic_perf(mops: float = 42.0) -> dict:
@@ -38,8 +58,11 @@ def main(argv=None):
     if _have_gvsoc():
         from .gapflow_real import run_gvsoc       # provided on SDK hosts
         perf = run_gvsoc(a.model); provenance = "simulated"  # GVSOC = cycle-accurate sim
+    elif (m := measured_perf()) is not None:
+        perf = m; provenance = "measured"         # deployed op-point from the silicon sweep
+        print(f"[info] using measured deployed operating point ({DEPLOY_SIZE}px) from sensei_arch_sweep.csv")
     else:
-        print("[warn] gvsoc not found -> analytical perf model")
+        print("[warn] gvsoc not found and no sweep CSV -> analytical perf model")
         perf = analytic_perf(); provenance = "simulated"
 
     # latency + cycles
