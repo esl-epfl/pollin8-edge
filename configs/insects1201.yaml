@@ -1,0 +1,18 @@
+# Bjerge et al. (2022) benchmark — 9 primary species (train/val).
+# Zenodo: 10.5281/zenodo.7395752  (YOLOv5 label format)
+path: ../data/insects1201
+train: images/train
+val: images/val
+test: images/test            # locked split; NEVER used for training/HPO
+nc: 9
+names:
+  0: Coccinella septempunctata   # 7-spot ladybird   (pest predator)
+  1: Apis mellifera              # honeybee          (pollinator)
+  2: Bombus lapidarius           # red-tailed bumblebee
+  3: Bombus terrestris           # buff-tailed bumblebee
+  4: Eupeodes corolla            # hoverfly
+  5: Episyrphus balteatus        # marmalade hoverfly
+  6: Aglais urticae              # small tortoiseshell
+  7: Vespula vulgaris            # common wasp       (pest)
+  8: Eristalis tenax             # drone fly
+# Test split adds coarse classes 9-14; prepare_data.py remaps/ignores them — see docs.

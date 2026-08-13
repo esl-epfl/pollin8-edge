@@ -1,0 +1,7 @@
+Code in this repository is licensed under Apache-2.0, matching the SENSEI ecosystem
+(pulp-bio/sensei-sdk). Documentation, figures and tables are licensed CC-BY-4.0.
+
+The Bjerge et al. (2022) benchmark (Zenodo 10.5281/zenodo.7395752) is CC-BY-4.0 and
+is NOT redistributed here; download_data.py fetches it from the original source.
+
+SPDX-License-Identifier: Apache-2.0
