@@ -146,7 +146,20 @@ Python **3.11.7** on RHEL 9.4 / SLURM 24.11.5. The pipeline uses **three separat
 External repos (pinned commits): classic `ultralytics/yolov5` @ `20d1d78`, GreenWaves `gap_sdk` @ `a230265`. Dataset: Zenodo `10.5281/zenodo.7395752`. Full table + rationale: [`env/README.md`](env/README.md).
 
 ## Citation
-Please cite the paper. A BibTeX entry will be added on publication.
+
+```
+@inproceedings{constantinescu2026pollin8,
+  author    = {Constantinescu, Denisa-Andreea and
+               Wiese, Philip and
+               Consani, Mattia and
+               Kartsch, Victor and
+               Benini, Luca and
+               Atienza, David},
+  title     = {{Pollin8: Species-Level Pollinator and Pest Counting on a Milliwatt System-on-Chip}},
+  booktitle = {Proceedings of the IFIP/IEEE International Conference on Very Large Scale Integration SoC (VLSI-SoC)},
+  year      = {2026}
+}
+```
 
 ## License
 See [`LICENSE`](LICENSE).
